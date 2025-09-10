@@ -275,6 +275,14 @@ class ControlDeck(Adw.Application):
         refresh_btn.connect("clicked", lambda x: self.refresh_all())
         header.pack_start(refresh_btn)
         
+        # Plugin manager button
+        plugin_btn = Gtk.Button()
+        plugin_btn.set_icon_name("application-x-addon-symbolic")
+        plugin_btn.set_tooltip_text("Manage Plugins")
+        plugin_btn.add_css_class("flat")
+        plugin_btn.connect("clicked", self.open_plugin_manager)
+        header.pack_end(plugin_btn)
+        
         main_box.append(header)
         
         # Content box with cards
@@ -354,3 +362,31 @@ class ControlDeck(Adw.Application):
         for card in self.cards:
             card.update_status()
         return True  # Continue timer
+    
+    def open_plugin_manager(self, button):
+        """Open the plugin manager window"""
+        try:
+            from plugin_manager import PluginManager
+            plugin_dir = Path(__file__).parent / "plugins"
+            manager = PluginManager(self, plugin_dir)
+            manager.set_transient_for(self.window)
+            manager.set_modal(True)
+            
+            # Connect to refresh when closed
+            manager.connect("close-request", lambda x: self.on_plugin_manager_closed())
+            manager.present()
+        except Exception as e:
+            print(f"Failed to open plugin manager: {e}")
+    
+    def on_plugin_manager_closed(self):
+        """Reload plugins when manager closes"""
+        # Clear current modules
+        self.modules.clear()
+        
+        # Reload plugins from directory
+        plugin_dir = Path(__file__).parent / "plugins"
+        self.load_plugins_from_directory(plugin_dir)
+        
+        # Refresh UI
+        self.refresh_all()
+        return False
